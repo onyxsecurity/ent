@@ -221,18 +221,18 @@ func NewType(c *Config, schema *load.Schema) (*Type, error) {
 		fields:      make(map[string]*Field, len(schema.Fields)),
 		foreignKeys: make(map[string]struct{}),
 	}
-	if !typ.IsView() {
-		typ.ID = &Field{
-			cfg:  c,
-			typ:  typ,
+	// if !typ.IsView() {
+	typ.ID = &Field{
+		cfg:  c,
+		typ:  typ,
+		Name: "id",
+		def: &load.Field{
 			Name: "id",
-			def: &load.Field{
-				Name: "id",
-			},
-			Type:      idType,
-			StructTag: structTag("id", ""),
-		}
+		},
+		Type:      idType,
+		StructTag: structTag("id", ""),
 	}
+	// }
 	if err := ValidSchemaName(typ.Name); err != nil {
 		return nil, err
 	}
