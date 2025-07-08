@@ -45,7 +45,8 @@ type Table struct {
 	ForeignKeys []*ForeignKey
 	Annotation  *entsql.Annotation
 	Comment     string
-	View        bool // Indicate the table is a view.
+	View        bool   // Indicate the table is a view.
+	Pos         string // filename:line of the ent schema definition.
 }
 
 // NewTable returns a new table with the given name.
@@ -72,6 +73,12 @@ func (t *Table) SetComment(c string) *Table {
 // SetSchema sets the table schema.
 func (t *Table) SetSchema(s string) *Table {
 	t.Schema = s
+	return t
+}
+
+// SetPos sets the table position.
+func (t *Table) SetPos(p string) *Table {
+	t.Pos = p
 	return t
 }
 
@@ -430,28 +437,6 @@ type ForeignKey struct {
 	OnDelete   ReferenceOption // action on delete.
 }
 
-// DSL returns a default DSL query for a foreign-key.
-func (fk ForeignKey) DSL() *sql.ForeignKeyBuilder {
-	cols := make([]string, len(fk.Columns))
-	refs := make([]string, len(fk.RefColumns))
-	for i, c := range fk.Columns {
-		cols[i] = c.Name
-	}
-	for i, c := range fk.RefColumns {
-		refs[i] = c.Name
-	}
-	dsl := sql.ForeignKey().Symbol(fk.Symbol).
-		Columns(cols...).
-		Reference(sql.Reference().Table(fk.RefTable.Name).Columns(refs...))
-	if action := string(fk.OnDelete); action != "" {
-		dsl.OnDelete(action)
-	}
-	if action := string(fk.OnUpdate); action != "" {
-		dsl.OnUpdate(action)
-	}
-	return dsl
-}
-
 // ReferenceOption for constraint actions.
 type ReferenceOption string
 
@@ -477,24 +462,6 @@ type Index struct {
 	Annotation *entsql.IndexAnnotation // index annotation.
 	columns    []string                // columns loaded from query scan.
 	realname   string                  // real name in the database (Postgres only).
-}
-
-// Builder returns the query builder for index creation. The DSL is identical in all dialects.
-func (i *Index) Builder(table string) *sql.IndexBuilder {
-	idx := sql.CreateIndex(i.Name).Table(table)
-	if i.Unique {
-		idx.Unique()
-	}
-	for _, c := range i.Columns {
-		idx.Column(c.Name)
-	}
-	return idx
-}
-
-// DropBuilder returns the query builder for the drop index.
-func (i *Index) DropBuilder(table string) *sql.DropIndexBuilder {
-	idx := sql.DropIndex(i.Name).Table(table)
-	return idx
 }
 
 // Indexes used for scanning all sql.Rows into a list of indexes, because
@@ -670,6 +637,25 @@ func Dump(ctx context.Context, dialect, version string, tables []*Table, opts ..
 			Cmd:     q,
 			Comment: fmt.Sprintf("Add %q view", v.Name),
 		})
+	}
+	for _, t := range tables {
+		p.Directives = append(p.Directives, fmt.Sprintf(
+			"-- atlas:pos %s%s[type=%s] %s",
+			func() string {
+				if t.Schema != "" {
+					return t.Schema + "[type=schema]."
+				}
+				return ""
+			}(),
+			t.Name,
+			func() string {
+				if t.View {
+					return "view"
+				}
+				return "table"
+			}(),
+			t.Pos,
+		))
 	}
 	f, err := migrate.DefaultFormatter.FormatFile(p)
 	if err != nil {
