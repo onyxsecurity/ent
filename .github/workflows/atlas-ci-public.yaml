@@ -19,8 +19,8 @@ jobs:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ariga/atlas-sync-action@v0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ariga/atlas-sync-action@2ca31f55e863b6736956424c5710862653813401 # v0.2.1
         with:
           dir: 'examples/migration/ent/migrate/migrations'
           driver: mysql # or: postgres | sqlite
@@ -47,10 +47,10 @@ jobs:
           --health-retries 10
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0 # Mandatory unless "latest" is set below.
-      - uses: ariga/atlas-action@v0
+      - uses: ariga/atlas-action@cdbe4fd1306518ffc111633195010cbc0621767b # v0
         with:
           dir: 'examples/migration/ent/migrate/migrations'
           dev-url: mysql://root:pass@localhost:3306/dev
